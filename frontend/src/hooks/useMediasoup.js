@@ -73,7 +73,10 @@ export function useMediasoupRoom(roomCode) {
     let cancelled = false;
 
     async function start() {
-      const socket = io('/', { withCredentials: true, path: '/socket.io' });
+      // In production, VITE_API_URL points at the deployed backend origin
+      // (Netlify only hosts the static frontend, not the mediasoup server).
+      const socketUrl = import.meta.env.VITE_API_URL || '/';
+      const socket = io(socketUrl, { withCredentials: true, path: '/socket.io' });
       socketRef.current = socket;
 
       socket.on('connect_error', (err) => setError(err.message));
