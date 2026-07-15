@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: studyhere
+      POSTGRES_PASSWORD: studyhere
+      POSTGRES_DB: studyhere
+    ports:
+      - '5432:5432'
+    volumes:
+      - studyhere_pg_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      PORT: 4000
+      NODE_ENV: production
+      CLIENT_URL: http://localhost:5173
+      JWT_SECRET: change_this_to_a_long_random_string
+      JWT_EXPIRES_IN: 7d
+      COOKIE_NAME: studyhere_token
+      DATABASE_URL: postgresql://studyhere:studyhere@postgres:5432/studyhere?schema=public
+      MEDIASOUP_ANNOUNCED_IP: 127.0.0.1
+      MEDIASOUP_MIN_PORT: 40000
+      MEDIASOUP_MAX_PORT: 40100
+    ports:
+      - '4000:4000'
+      - '40000-40100:40000-40100/udp'
+    command: sh -c "npx prisma migrate deploy && node src/server.js"
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - '5173:5173'
+
+volumes:
+  studyhere_pg_data:

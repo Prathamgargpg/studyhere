@@ -1,0 +1,74 @@
+// Prisma schema for StudyHere - Postgres data storage
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(uuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  avatarColor  String    @default("#6C5CE7")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  roomsOwned   Room[]    @relation("RoomOwner")
+  memberships  RoomMember[]
+  messages     ChatMessage[]
+}
+
+model Room {
+  id          String   @id @default(uuid())
+  code        String   @unique // short shareable join code, e.g. "abc-defg-hij"
+  name        String
+  isLocked    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  ownerId     String
+  owner       User     @relation("RoomOwner", fields: [ownerId], references: [id])
+
+  members     RoomMember[]
+  meetings    Meeting[]
+  messages    ChatMessage[]
+}
+
+model RoomMember {
+  id       String   @id @default(uuid())
+  role     String   @default("participant") // "host" | "participant"
+  joinedAt DateTime @default(now())
+
+  userId   String
+  user     User     @relation(fields: [userId], references: [id])
+
+  roomId   String
+  room     Room     @relation(fields: [roomId], references: [id])
+
+  @@unique([userId, roomId])
+}
+
+// One row per actual call session (start/end), for history & analytics
+model Meeting {
+  id        String    @id @default(uuid())
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  roomId    String
+  room      Room      @relation(fields: [roomId], references: [id])
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  body      String
+  createdAt DateTime @default(now())
+
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id])
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+}
