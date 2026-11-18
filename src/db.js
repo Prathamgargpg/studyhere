@@ -5,14 +5,20 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
+// Optional: keep this app's tables in their own schema, so it can safely share
+// a database with another app (e.g. PG_SCHEMA=broadcast).
+const SCHEMA = (process.env.PG_SCHEMA || '').replace(/[^a-z0-9_]/gi, '');
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 5,
+  ...(SCHEMA ? { options: `-c search_path=${SCHEMA}` } : {}),
 });
 
 const query = (text, params) => pool.query(text, params);
 
 async function migrate() {
+  if (SCHEMA) await query(`CREATE SCHEMA IF NOT EXISTS "${SCHEMA}"`);
   await query(`
     CREATE TABLE IF NOT EXISTS contacts (
       id SERIAL PRIMARY KEY,
